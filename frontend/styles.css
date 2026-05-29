@@ -1,0 +1,134 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #050505;
+    scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+}
+::-webkit-scrollbar-track {
+    background: #0A0A0A;
+}
+::-webkit-scrollbar-thumb {
+    background: #D4B896;
+}
+
+a, button {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    background: #D4B896;
+    height: 1px;
+    border-radius: 0;
+}
+input[type="range"]:focus {
+    outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 0;
+    background: #D4B896;
+    cursor: pointer;
+    border: 2px solid #F5F0E6;
+    box-shadow: 0 0 8px rgba(212, 184, 150, 0.5);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    background: #E8D5B5;
+}
+
+.room-type-btn.active-room,
+.repair-type-btn.active-repair {
+    background: #D4B896;
+    color: #050505;
+    border-color: #D4B896;
+}
+
+@keyframes priceGlow {
+    0% { text-shadow: 0 0 0px #D4B896; }
+    50% { text-shadow: 0 0 10px rgba(212, 184, 150, 0.5); }
+    100% { text-shadow: 0 0 0px #D4B896; }
+}
+#priceResult {
+    animation: priceGlow 1.2s ease-in-out 2;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 0.8s linear infinite;
+}
+
+td {
+    padding: 1rem 1.5rem;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(212, 184, 150, 0.1);
+}
+
+.status-select {
+    background: #0A0A0A;
+    color: #D4B896;
+    border: 1px solid #D4B896;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+}
+
+.delete-request {
+    color: #a8885c;
+    transition: 0.2s;
+    font-size: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+.delete-request:hover {
+    color: #D4B896;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(10px); }
+}
+.animate-bounce {
+    animation: bounce 2s infinite;
+}
+
+.bg-black\/95 {
+    backdrop-filter: blur(12px);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    h1 {
+        font-size: 2.5rem;
+    }
+    td {
+        padding: 0.75rem;
+        font-size: 0.7rem;
+    }
+    .status-select {
+        font-size: 0.65rem;
+        padding: 3px 6px;
+    }
+}
