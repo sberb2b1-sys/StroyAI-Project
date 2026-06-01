@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>СТРОЙ AI | Элитный ремонт с искусственным интеллектом</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dark-bg': '#050505',
+                        'dark-card': '#0A0A0A',
+                        'dark-surface': '#111111',
+                        'beige': '#D4B896',
+                        'beige-light': '#E8D5B5',
+                        'gold-premium': '#C8A87C',
+                        'ivory': '#F5F0E6',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Manrope', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-bg text-ivory font-sans">
+
+    <header class="fixed w-full z-50 bg-black/70 backdrop-blur-xl border-b border-beige/20">
+        <div class="container mx-auto px-8 py-5 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10">
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <rect x="25" y="25" width="20" height="20" fill="#D4B896" opacity="0.9"/>
+                        <rect x="55" y="25" width="20" height="20" fill="#D4B896" opacity="0.5"/>
+                        <rect x="25" y="55" width="20" height="20" fill="#D4B896" opacity="0.5"/>
+                        <rect x="55" y="55" width="20" height="20" fill="#D4B896" opacity="0.9"/>
+                        <circle cx="65" cy="35" r="3" fill="#050505"/>
+                        <circle cx="35" cy="65" r="3" fill="#050505"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-2xl font-serif font-bold tracking-tight">
+                        <span class="text-beige">СТРОЙ</span>
+                        <span class="text-ivory">AI</span>
+                    </span>
+                    <p class="text-[8px] tracking-[0.3em] text-beige/60 uppercase mt-0.5">ИНТЕЛЛЕКТУАЛЬНЫЙ РЕМОНТ</p>
+                </div>
+            </div>
+            <nav class="hidden md:flex gap-12 text-sm font-medium uppercase tracking-wide">
+                <a href="design.html" class="hover:text-beige transition-all duration-300">Дизайн</a>
+                <a href="#services" class="hover:text-beige transition">Материалы</a>
+                <a href="calculator.html" class="hover:text-beige transition">Калькулятор</a>
+                <a href="#contacts" class="hover:text-beige transition">Контакты</a>
+            </nav>
+            <button class="hidden md:block bg-gradient-to-r from-beige to-gold-premium text-dark-bg px-8 py-3 text-sm font-semibold tracking-wider hover:shadow-xl transition-all transform hover:scale-105">+7 (999) 888-77-66</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Герой — убрана стрелка, фраза опущена ниже -->
+        <section class="relative min-h-screen flex items-center overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-dark-bg via-dark-bg to-gold-premium/20"></div>
+            <div class="container mx-auto px-8 relative z-10">
+                <div class="max-w-4xl">
+                    <!-- Фраза теперь ниже, с отступом -->
+                    <div class="mb-8 mt-20">
+                        <span class="inline-block w-16 h-px bg-beige mb-4"></span>
+                        <p class="text-beige text-sm tracking-[0.3em] uppercase font-semibold">ИСКУССТВЕННЫЙ ИНТЕЛЛЕКТ В АРХИТЕКТУРЕ</p>
+                    </div>
+                    <h1 class="text-7xl md:text-8xl lg:text-9xl font-serif font-black leading-[1.05]">
+                        РЕМОНТ<br>
+                        <span class="bg-gradient-to-r from-beige via-gold-premium to-beige-light bg-clip-text text-transparent">ВЫСШЕГО КЛАССА</span>
+                    </h1>
+                    <p class="text-xl text-ivory/70 mt-8 max-w-2xl leading-relaxed font-light">Нейросеть проектирует интерьеры премиум-класса, подбирает эксклюзивные материалы и управляет стройкой. Полный цикл под ключ.</p>
+                    <div class="mt-12 flex flex-col sm:flex-row gap-5">
+                        <button onclick="window.location.href='calculator.html'" class="group bg-gradient-to-r from-beige to-gold-premium text-dark-bg px-10 py-5 font-semibold text-lg tracking-wider hover:shadow-2xl transition-all transform hover:scale-105 flex items-center gap-3">
+                            <span>РАССЧИТАТЬ СТОИМОСТЬ</span>
+                            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                            </svg>
+                        </button>
+                        <button onclick="window.location.href='design.html'" class="border border-beige text-beige px-10 py-5 font-semibold hover:bg-beige/10 transition-all">СОЗДАТЬ ДИЗАЙН</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Карточки услуг (без изменений) -->
+        <section id="services" class="py-28 bg-dark-card">
+            <div class="container mx-auto px-8">
+                <div class="text-center mb-20">
+                    <div class="inline-block w-12 h-px bg-beige mb-4"></div>
+                    <span class="text-beige tracking-[0.2em] text-sm uppercase font-semibold">ПРЕИМУЩЕСТВА</span>
+                    <h2 class="text-5xl md:text-6xl font-serif font-bold mt-3">ЭКСКЛЮЗИВНЫЕ <span class="text-beige">РЕШЕНИЯ</span></h2>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="group bg-dark-bg p-10 border-l-2 border-beige/30 hover:border-beige transition-all hover:shadow-2xl hover:-translate-y-2">
+                        <div class="w-16 h-16 mb-6 group-hover:scale-110 transition-transform">
+                            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M30 50 L50 30 L70 50 L50 70 Z" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <circle cx="50" cy="50" r="8" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <line x1="50" y1="42" x2="50" y2="25" stroke="#D4B896" stroke-width="1.5"/>
+                                <line x1="50" y1="58" x2="50" y2="75" stroke="#D4B896" stroke-width="1.5"/>
+                                <line x1="42" y1="50" x2="25" y2="50" stroke="#D4B896" stroke-width="1.5"/>
+                                <line x1="58" y1="50" x2="75" y2="50" stroke="#D4B896" stroke-width="1.5"/>
+                                <circle cx="50" cy="50" r="2" fill="#D4B896"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-serif font-bold mb-4">ГЕНЕРАТИВНЫЙ ДИЗАЙН</h3>
+                        <p class="text-ivory/60 leading-relaxed">Нейросеть создаёт 20+ вариантов планировки и стиля за 45 минут с визуализацией 8K</p>
+                    </div>
+                    
+                    <div class="group bg-dark-bg p-10 border-l-2 border-beige/30 hover:border-beige transition-all hover:shadow-2xl hover:-translate-y-2">
+                        <div class="w-16 h-16 mb-6 group-hover:scale-110 transition-transform">
+                            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="25" y="35" width="50" height="40" rx="2" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <path d="M35 35 L35 25 L65 25 L65 35" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <circle cx="40" cy="65" r="4" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <circle cx="60" cy="65" r="4" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <line x1="45" y1="55" x2="55" y2="55" stroke="#D4B896" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-serif font-bold mb-4">ПРЕМИУМ МАТЕРИАЛЫ</h3>
+                        <p class="text-ivory/60 leading-relaxed">Торги между 300+ эксклюзивными поставщиками. Только сертифицированные бренды</p>
+                    </div>
+                    
+                    <div class="group bg-dark-bg p-10 border-l-2 border-beige/30 hover:border-beige transition-all hover:shadow-2xl hover:-translate-y-2">
+                        <div class="w-16 h-16 mb-6 group-hover:scale-110 transition-transform">
+                            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="50" cy="50" r="30" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <circle cx="50" cy="50" r="15" stroke="#D4B896" stroke-width="1.5" fill="none"/>
+                                <path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50" stroke="#D4B896" stroke-width="1.5"/>
+                                <circle cx="50" cy="50" r="3" fill="#D4B896"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-serif font-bold mb-4">AI-КОНТРОЛЬ 24/7</h3>
+                        <p class="text-ivory/60 leading-relaxed">Чат-бот мониторит 300+ точек контроля, уведомляет о сроках и качестве в реальном времени</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Форма захвата — теперь ведёт на страницу дизайна -->
+        <section class="py-28 bg-gradient-to-br from-dark-surface via-dark-bg to-dark-surface">
+            <div class="container mx-auto px-8 text-center">
+                <div class="max-w-3xl mx-auto">
+                    <div class="inline-block w-12 h-px bg-beige mb-4"></div>
+                    <h2 class="text-4xl md:text-5xl font-serif font-bold">СОЗДАЙТЕ ДИЗАЙН ЗА 60 СЕКУНД</h2>
+                    <p class="text-ivory/60 mt-4 text-lg">Опишите вашу комнату — нейросеть сгенерирует 3 варианта интерьера</p>
+                    <button onclick="window.location.href='design.html'" class="mt-10 bg-gradient-to-r from-beige to-gold-premium text-dark-bg px-10 py-4 font-semibold tracking-wider hover:shadow-xl transition-all">НАЧАТЬ ПРОЕКТИРОВАНИЕ</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="contacts" class="bg-dark-card py-16 border-t border-beige/10">
+        <div class="container mx-auto px-8">
+            <div class="grid md:grid-cols-4 gap-12 text-center md:text-left">
+                <div class="col-span-2">
+                    <div class="flex items-center gap-3 justify-center md:justify-start">
+                        <svg class="w-10 h-10" viewBox="0 0 100 100">
+                            <rect x="25" y="25" width="20" height="20" fill="#D4B896" opacity="0.9"/>
+                            <rect x="55" y="25" width="20" height="20" fill="#D4B896" opacity="0.5"/>
+                            <rect x="25" y="55" width="20" height="20" fill="#D4B896" opacity="0.5"/>
+                            <rect x="55" y="55" width="20" height="20" fill="#D4B896" opacity="0.9"/>
+                        </svg>
+                        <div>
+                            <span class="text-2xl font-serif font-bold"><span class="text-beige">СТРОЙ</span><span class="text-ivory">AI</span></span>
+                            <p class="text-[9px] tracking-[0.2em] text-beige/50 uppercase">ИНТЕЛЛЕКТУАЛЬНЫЙ РЕМОНТ</p>
+                        </div>
+                    </div>
+                    <p class="text-ivory/40 text-sm mt-6">Эксклюзивные решения в строительстве с использованием передовых нейросетевых технологий</p>
+                </div>
+                <div>
+                    <h5 class="font-serif font-bold text-beige mb-5">КОНТАКТЫ</h5>
+                    <p class="text-ivory/60">+7 (999) 888-77-66</p>
+                    <p class="text-ivory/60 mt-2">hello@stroiai.ru</p>
+                    <p class="text-ivory/40 text-sm mt-4">Ежедневно 10:00 — 22:00</p>
+                </div>
+                <div>
+                    <h5 class="font-serif font-bold text-beige mb-5">СОЦИАЛЬНЫЕ СЕТИ</h5>
+                    <div class="flex justify-center md:justify-start gap-8">
+                        <a href="#" class="text-ivory/50 hover:text-beige transition">TELEGRAM</a>
+                        <a href="#" class="text-ivory/50 hover:text-beige transition">WHATSAPP</a>
+                        <a href="#" class="text-ivory/50 hover:text-beige transition">BEHANCE</a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-beige/10 mt-12 pt-8 text-center text-ivory/30 text-xs tracking-wide">
+                © 2025 СТРОЙ AI — ВСЕ ПРАВА ЗАЩИЩЕНЫ
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

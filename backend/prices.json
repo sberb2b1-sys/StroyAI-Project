@@ -1,36 +1,55 @@
 {
-  "default_area": 45,
-  "work_cost_per_sqm": {
-    "economy": 1200,
-    "standard": 2400,
-    "premium": 4500
+  "materials": {
+    "economy": {
+      "flooring": {"name": "Ламинат 31 класс", "price_per_sqm": 850, "unit": "м²"},
+      "wall_paint": {"name": "Краска водно-дисперсионная", "price_per_sqm": 120, "unit": "м²"},
+      "ceiling": {"name": "Побелка", "price_per_sqm": 80, "unit": "м²"},
+      "skirting": {"name": "Плинтус ПВХ", "price_per_meter": 150, "unit": "п.м"}
+    },
+    "standard": {
+      "flooring": {"name": "Ламинат 33 класс Quick-Step", "price_per_sqm": 1850, "unit": "м²"},
+      "wall_paint": {"name": "Краска акриловая Tikkurila", "price_per_sqm": 250, "unit": "м²"},
+      "ceiling": {"name": "Натяжной потолок ПВХ", "price_per_sqm": 800, "unit": "м²"},
+      "skirting": {"name": "Плинтус деревянный", "price_per_meter": 350, "unit": "п.м"}
+    },
+    "premium": {
+      "flooring": {"name": "Паркетная доска Kahrs", "price_per_sqm": 5200, "unit": "м²"},
+      "wall_paint": {"name": "Дизайнерская краска Little Greene", "price_per_sqm": 650, "unit": "м²"},
+      "ceiling": {"name": "Натяжной потолок тканевый", "price_per_sqm": 2500, "unit": "м²"},
+      "skirting": {"name": "Плинтус массив дуба", "price_per_meter": 1200, "unit": "п.м"}
+    }
+  },
+  "work_cost": {
+    "economy": {
+      "flooring": 350,
+      "wall_paint": 200,
+      "ceiling": 250,
+      "skirting": 100
+    },
+    "standard": {
+      "flooring": 650,
+      "wall_paint": 400,
+      "ceiling": 550,
+      "skirting": 200
+    },
+    "premium": {
+      "flooring": 1200,
+      "wall_paint": 800,
+      "ceiling": 1000,
+      "skirting": 400
+    }
+  },
+  "room_coefficients": {
+    "living_room": 1.0,
+    "bedroom": 1.0,
+    "kitchen": 1.2,
+    "bathroom": 1.5,
+    "hallway": 1.1
   },
   "duration_days": {
     "economy": 30,
     "standard": 45,
     "premium": 60
   },
-  "materials": {
-    "economy": {
-      "flooring": { "name": "Ламинат", "unit": "м²", "price_per_sqm": 850 },
-      "paint": { "name": "Краска", "unit": "м²", "price_per_sqm": 300 },
-      "wallpaper": { "name": "Обои", "unit": "м²", "price_per_sqm": 308 },
-      "lighting": { "name": "Светильники", "unit": "комплект", "fixed_price": 1200 },
-      "doors": { "name": "Двери", "unit": "комплект", "fixed_price": 8500 }
-    },
-    "standard": {
-      "flooring": { "name": "Инженерная доска", "unit": "м²", "price_per_sqm": 2200 },
-      "paint": { "name": "Краска премиум", "unit": "м²", "price_per_sqm": 700 },
-      "wallpaper": { "name": "Обои дизайнерские", "unit": "м²", "price_per_sqm": 715 },
-      "lighting": { "name": "Освещение", "unit": "комплект", "fixed_price": 4500 },
-      "doors": { "name": "Двери шпон", "unit": "комплект", "fixed_price": 18500 }
-    },
-    "premium": {
-      "flooring": { "name": "Паркет премиум", "unit": "м²", "price_per_sqm": 5500 },
-      "plaster": { "name": "Декоративная штукатурка", "unit": "м²", "price_per_sqm": 2640 },
-      "panels": { "name": "Панели / молдинги", "unit": "м²", "price_per_sqm": 1080 },
-      "lighting": { "name": "Освещение премиум", "unit": "комплект", "fixed_price": 85000 },
-      "doors": { "name": "Двери массив", "unit": "комплект", "fixed_price": 42000 }
-    }
-  }
+  "default_room": "living_room"
 }

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADMIN — СТРОЙ AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dark-bg': '#050505',
+                        'dark-card': '#0A0A0A',
+                        'beige': '#D4B896',
+                        'ivory': '#F5F0E6',
+                    },
+                    fontFamily: {
+                        'serif': ['Playfair Display', 'serif'],
+                        'sans': ['Manrope', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-bg text-ivory font-sans">
+
+    <!-- Форма входа -->
+    <div id="loginScreen" class="fixed inset-0 bg-dark-bg z-50 flex items-center justify-center">
+        <div class="bg-dark-card border border-beige/20 p-8 max-w-md w-full mx-4">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto mb-4">
+                    <svg viewBox="0 0 100 100" class="w-full h-full">
+                        <rect x="25" y="25" width="20" height="20" fill="#D4B896" opacity="0.9"/>
+                        <rect x="55" y="25" width="20" height="20" fill="#D4B896" opacity="0.5"/>
+                        <rect x="25" y="55" width="20" height="20" fill="#D4B896" opacity="0.5"/>
+                        <rect x="55" y="55" width="20" height="20" fill="#D4B896" opacity="0.9"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-serif font-bold">ВХОД В АДМИН-ПАНЕЛЬ</h2>
+                <p class="text-ivory/40 text-sm mt-2">Введите учётные данные</p>
+            </div>
+            <form id="loginForm">
+                <input type="password" id="adminPassword" placeholder="Пароль" class="w-full bg-dark-bg border border-beige/20 rounded-none p-3 mb-4 focus:border-beige outline-none">
+                <button type="submit" class="w-full bg-gradient-to-r from-beige to-gold-premium text-dark-bg font-semibold py-3 tracking-wider">ВОЙТИ</button>
+            </form>
+            <p class="text-center text-ivory/30 text-xs mt-4">Доступ только для авторизованного персонала</p>
+        </div>
+    </div>
+
+    <!-- Дашборд -->
+    <div id="dashboardContent" class="hidden">
+        <div class="container mx-auto px-8 py-8 max-w-7xl">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-8 border-b border-beige/20 pb-6">
+                <div>
+                    <h1 class="text-3xl font-serif font-bold"><span class="text-beige">▮</span> BI DASHBOARD</h1>
+                    <p class="text-ivory/40 text-sm mt-1">Аналитика поведения пользователей | AI CRM</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button id="refreshDataBtn" class="border border-beige/40 px-4 py-2 text-beige hover:bg-beige/10 transition-all text-sm">🔄 ОБНОВИТЬ</button>
+                    <button id="exportExcelBtn" class="border border-green-500/40 px-4 py-2 text-green-400 hover:bg-green-500/10 transition-all text-sm">📊 ЭКСПОРТ В EXCEL</button>
+                    <button id="logoutBtn" class="border border-red-500/40 px-4 py-2 text-red-400 hover:bg-red-500/10 transition-all text-sm">🚪 ВЫЙТИ</button>
+                    <a href="index.html" class="border border-beige/40 px-6 py-2 text-beige hover:bg-beige/10 transition-all text-sm">← НА САЙТ</a>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-6 mb-10">
+                <div class="bg-dark-card border-l-4 border-beige p-5">
+                    <p class="text-ivory/40 text-xs tracking-wider">ВСЕГО ЗАЯВОК</p>
+                    <p class="text-3xl font-serif font-bold text-beige" id="totalRequests">0</p>
+                </div>
+                <div class="bg-dark-card border-l-4 border-beige p-5">
+                    <p class="text-ivory/40 text-xs tracking-wider">НОВЫЕ (СЕГОДНЯ)</p>
+                    <p class="text-3xl font-serif font-bold text-beige" id="todayRequests">0</p>
+                </div>
+                <div class="bg-dark-card border-l-4 border-beige p-5">
+                    <p class="text-ivory/40 text-xs tracking-wider">В РАБОТЕ</p>
+                    <p class="text-3xl font-serif font-bold text-beige" id="inWorkRequests">0</p>
+                </div>
+                <div class="bg-dark-card border-l-4 border-beige p-5">
+                    <p class="text-ivory/40 text-xs tracking-wider">КОНВЕРСИЯ</p>
+                    <p class="text-3xl font-serif font-bold text-beige" id="conversionRate">0%</p>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-8 mb-10">
+                <div class="bg-dark-card border border-beige/10 p-6">
+                    <h3 class="font-serif font-bold text-beige mb-4">ДИНАМИКА ЗАЯВОК ПО ДНЯМ</h3>
+                    <canvas id="trendChart" height="200"></canvas>
+                </div>
+                <div class="bg-dark-card border border-beige/10 p-6">
+                    <h3 class="font-serif font-bold text-beige mb-4">РАСПРЕДЕЛЕНИЕ ПО ТИПАМ</h3>
+                    <canvas id="typeChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-dark-card border border-beige/10 overflow-hidden mt-8">
+                <div class="p-4 border-b border-beige/10">
+                    <h3 class="font-serif font-bold text-beige">ВСЕ ЗАЯВКИ</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-dark-bg border-b border-beige/20">
+                            <tr class="text-left text-beige text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4">ID</th>
+                                <th class="px-6 py-4">ДАТА</th>
+                                <th class="px-6 py-4">ТИП</th>
+                                <th class="px-6 py-4">ДАННЫЕ</th>
+                                <th class="px-6 py-4">СТАТУС</th>
+                                <th class="px-6 py-4">ДЕЙСТВИЯ</th>
+                              </tr>
+                        </thead>
+                        <tbody id="requestsTable" class="divide-y divide-beige/5"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const ADMIN_PASSWORD = 'admin2025';
+        
+        if (sessionStorage.getItem('admin_authenticated') === 'true') {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboardContent').classList.remove('hidden');
+            if (typeof initDashboard === 'function') setTimeout(() => initDashboard(), 100);
+        }
+        
+        document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('admin_authenticated', 'true');
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardContent').classList.remove('hidden');
+                if (typeof initDashboard === 'function') setTimeout(() => initDashboard(), 100);
+            } else {
+                alert('Неверный пароль');
+            }
+        });
+        
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+            sessionStorage.removeItem('admin_authenticated');
+            location.reload();
+        });
+    </script>
+</body>
+</html>

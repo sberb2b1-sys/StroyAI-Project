@@ -17,7 +17,12 @@ const columns = [
     { name: 'original_photo_base64', sql: 'TEXT' },
     { name: 'generated_variants_json', sql: 'TEXT' },
     { name: 'pdf_downloaded', sql: 'INTEGER DEFAULT 0' },
-    { name: 'description', sql: 'TEXT' }
+    { name: 'description', sql: 'TEXT' },
+    { name: 'room_type', sql: 'TEXT' },
+    { name: 'area_floor', sql: 'REAL' },
+    { name: 'area_walls', sql: 'REAL' },
+    { name: 'area_ceiling', sql: 'REAL' },
+    { name: 'skirting_length', sql: 'REAL' }
 ];
 
 function run(sql) {

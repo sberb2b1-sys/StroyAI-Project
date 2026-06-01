@@ -28,6 +28,9 @@ async function sendToBitrix24(formData) {
     };
     
     if (formData.roomDesc) leadData.fields.COMMENTS = `Описание: ${formData.roomDesc}`;
+    if (formData.dimensions) leadData.fields.COMMENTS += `\nРазмеры: ${formData.dimensions}`;
+    if (formData.budget) leadData.fields.COMMENTS += `\nБюджет: ${formData.budget}`;
+    if (formData.estimateTotal) leadData.fields.COMMENTS += `\nСмета: ${formData.estimateTotal} ₽`;
     if (formData.calcParams) leadData.fields.COMMENTS = `Параметры: ${formData.calcParams}`;
     
     try {
@@ -173,29 +176,64 @@ if (exactCalcBtn) {
     });
 }
 
-// ==================== СТРАНИЦА ДИЗАЙНА (3 варианта + смета + PDF) ====================
-const API_BASE = 'http://localhost:5000/api';
+// ==================== СТРАНИЦА ДИЗАЙНА (размеры + смета + 1 дизайн + PDF) ====================
+const API_BASE = `${window.location.origin}/api`;
+
+const ROOM_LABELS = {
+    living_room: 'Гостиная',
+    bedroom: 'Спальня',
+    kitchen: 'Кухня',
+    bathroom: 'Ванная',
+    hallway: 'Прихожая'
+};
+
+const ESTIMATE_LINE_LABELS = {
+    flooring: 'Пол',
+    walls: 'Стены',
+    ceiling: 'Потолок',
+    skirting: 'Плинтус'
+};
 
 let selectedBudget = 'standard';
-let generatedVariants = [];
-let selectedVariantId = null;
-let currentProjectId = null;
+let designImageBase64 = null;
 let currentEstimate = null;
-let originalPhotoBase64 = null;
+let currentProjectId = null;
+let ceilingManualEdit = false;
+let estimateDebounceTimer = null;
 
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+function toImageSrc(base64) {
+    if (!base64) return '';
+    if (base64.startsWith('data:')) return base64;
+    return `data:image/jpeg;base64,${base64}`;
 }
 
-function stripDataUrl(value) {
-    if (!value || typeof value !== 'string') return '';
-    const m = value.match(/^data:image\/[a-zA-Z+]+;base64,(.+)$/);
-    return m ? m[1] : value;
+function setPdfButtonEnabled(enabled) {
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    const pdfHint = document.getElementById('pdfHint');
+    if (!downloadPdfBtn) return;
+    downloadPdfBtn.disabled = !enabled;
+    downloadPdfBtn.classList.toggle('btn-pdf-disabled', !enabled);
+    if (pdfHint) {
+        pdfHint.textContent = enabled
+            ? 'PDF включает дизайн и детальную смету'
+            : (designImageBase64 ? 'Дождитесь расчёта сметы' : 'Заполните размеры и сгенерируйте дизайн');
+    }
+}
+
+function collectFormData() {
+    return {
+        room_type: document.getElementById('roomType')?.value || 'living_room',
+        area_floor: parseFloat(document.getElementById('areaFloor')?.value) || 0,
+        area_walls: parseFloat(document.getElementById('areaWalls')?.value) || 0,
+        area_ceiling: parseFloat(document.getElementById('areaCeiling')?.value) || 0,
+        skirting_length: parseFloat(document.getElementById('skirtingLength')?.value) || 0,
+        budget: selectedBudget,
+        description: document.getElementById('roomDescription')?.value.trim() || ''
+    };
+}
+
+function formDimensionsValid(data) {
+    return data.area_floor > 0 && data.area_walls > 0 && data.area_ceiling > 0;
 }
 
 function initDesignPage() {
@@ -203,44 +241,49 @@ function initDesignPage() {
     if (!designForm) return;
 
     const loadingSpinner = document.getElementById('loadingSpinner');
-    const variantsSection = document.getElementById('variantsSection');
-    const variantsContainer = document.getElementById('variantsContainer');
-    const selectedDesignSection = document.getElementById('selectedDesignSection');
-    const selectedDesignImage = document.getElementById('selectedDesignImage');
-    const estimateSection = document.getElementById('estimateSection');
-    const showEstimateBtn = document.getElementById('showEstimateBtn');
+    const designResultSection = document.getElementById('designResultSection');
+    const designImage = document.getElementById('designImage');
+    const estimateBlock = document.getElementById('estimateBlock');
     const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-    const roomPhoto = document.getElementById('roomPhoto');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const orderSection = document.getElementById('orderSection');
-    const orderBtn = document.getElementById('orderBtn');
+    const areaFloor = document.getElementById('areaFloor');
+    const areaCeiling = document.getElementById('areaCeiling');
 
-    // Budget selection buttons
-    document.querySelectorAll('.budget-btn').forEach((btn) => {
+    setPdfButtonEnabled(false);
+
+    document.querySelectorAll('#designForm .budget-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.budget-btn').forEach((b) => b.classList.remove('active'));
+            document.querySelectorAll('#designForm .budget-btn').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
             selectedBudget = btn.dataset.budget;
+            scheduleEstimateUpdate();
         });
     });
 
-    if (roomPhoto) {
-        roomPhoto.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file && fileNameDisplay) {
-                fileNameDisplay.textContent = `📎 ${file.name}`;
-                fileNameDisplay.classList.remove('hidden');
-            }
-        });
-    }
+    areaFloor?.addEventListener('input', () => {
+        if (!ceilingManualEdit && areaCeiling) {
+            areaCeiling.value = areaFloor.value;
+        }
+        scheduleEstimateUpdate();
+    });
 
-    // Pre-fill area from calculator if available
+    areaCeiling?.addEventListener('input', () => {
+        ceilingManualEdit = true;
+        scheduleEstimateUpdate();
+    });
+
+    ['roomType', 'areaWalls', 'skirtingLength'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('input', scheduleEstimateUpdate);
+        document.getElementById(id)?.addEventListener('change', scheduleEstimateUpdate);
+    });
+
     const calcParams = sessionStorage.getItem('calculatorParams');
     if (calcParams) {
         try {
             const p = JSON.parse(calcParams);
-            const areaInput = document.getElementById('roomArea');
-            if (areaInput && p.area) areaInput.value = p.area;
+            if (p.area && areaFloor) {
+                areaFloor.value = p.area;
+                if (areaCeiling) areaCeiling.value = p.area;
+            }
         } catch (_) { /* ignore */ }
     }
 
@@ -249,186 +292,176 @@ function initDesignPage() {
         handleFormSubmit();
     });
 
+    function scheduleEstimateUpdate() {
+        clearTimeout(estimateDebounceTimer);
+        estimateDebounceTimer = setTimeout(() => updateEstimate(), 400);
+    }
+
+    async function updateEstimate() {
+        const form = collectFormData();
+        if (!formDimensionsValid(form)) {
+            estimateBlock?.classList.add('hidden');
+            setPdfButtonEnabled(false);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/estimate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    budget: form.budget,
+                    area_floor: form.area_floor,
+                    area_walls: form.area_walls,
+                    area_ceiling: form.area_ceiling,
+                    skirting_length: form.skirting_length,
+                    room_type: form.room_type
+                })
+            });
+            const estimate = await response.json();
+            if (!response.ok) throw new Error(estimate.error || 'Ошибка сметы');
+
+            currentEstimate = estimate;
+            renderEstimateTable(estimate);
+            estimateBlock?.classList.remove('hidden');
+            setPdfButtonEnabled(!!designImageBase64 && !!currentEstimate);
+        } catch (err) {
+            console.error('Смета:', err);
+        }
+    }
+
+    function renderEstimateTable(estimate) {
+        const tbody = document.getElementById('estimateTableBody');
+        if (!tbody) return;
+
+        const rows = ['flooring', 'walls', 'ceiling', 'skirting'];
+        tbody.innerHTML = rows.map((key) => {
+            const row = estimate[key];
+            if (!row) return '';
+            return `
+                <tr>
+                    <td>${ESTIMATE_LINE_LABELS[key]}</td>
+                    <td>${row.material_name}</td>
+                    <td>${row.quantity} ${row.unit || ''}</td>
+                    <td>${Number(row.material_unit_price).toLocaleString('ru-RU')} ₽</td>
+                    <td>${Number(row.work_unit_price).toLocaleString('ru-RU')} ₽</td>
+                    <td>${Number(row.material_cost).toLocaleString('ru-RU')} ₽</td>
+                    <td>${Number(row.work_cost).toLocaleString('ru-RU')} ₽</td>
+                    <td>${Number(row.total).toLocaleString('ru-RU')} ₽</td>
+                </tr>
+            `;
+        }).join('');
+
+        const grandCell = document.getElementById('grandTotalCell');
+        const durationCell = document.getElementById('durationDaysCell');
+        const coefEl = document.getElementById('estimateRoomCoef');
+        if (grandCell) grandCell.innerHTML = `<strong>${Number(estimate.total).toLocaleString('ru-RU')} ₽</strong>`;
+        if (durationCell) durationCell.textContent = estimate.duration_days ?? '—';
+        if (coefEl) {
+            coefEl.textContent = `${ROOM_LABELS[estimate.room_type] || estimate.room_type} · коэф. ×${estimate.room_coefficient}`;
+        }
+    }
+
+    async function saveProjectToDb(form, estimate) {
+        try {
+            const res = await fetch(`${API_BASE}/design-project`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    description: form.description,
+                    budget: form.budget,
+                    room_type: form.room_type,
+                    area_floor: form.area_floor,
+                    area_walls: form.area_walls,
+                    area_ceiling: form.area_ceiling,
+                    skirting_length: form.skirting_length,
+                    estimate_json: estimate
+                })
+            });
+            const data = await res.json();
+            if (data.success) currentProjectId = data.projectId;
+        } catch (e) {
+            console.error('DB save:', e);
+        }
+    }
+
     async function handleFormSubmit() {
-        const description = document.getElementById('roomDescription')?.value.trim();
-        const area = parseFloat(document.getElementById('roomArea')?.value);
-        const photoInput = document.getElementById('roomPhoto');
+        const form = collectFormData();
 
-        if (!description) {
-            alert('Пожалуйста, опишите интерьер');
+        if (!form.description) {
+            alert('Опишите желаемый дизайн');
             return;
         }
-        if (!area || area <= 0) {
-            alert('Укажите площадь в м²');
+        if (!formDimensionsValid(form)) {
+            alert('Заполните площади пола, стен и потолка');
             return;
         }
 
-        let imageBase64 = null;
-        if (photoInput?.files?.[0]) {
-            imageBase64 = await fileToBase64(photoInput.files[0]);
-            originalPhotoBase64 = imageBase64;
-        } else {
-            originalPhotoBase64 = null;
-        }
+        designImageBase64 = null;
+        setPdfButtonEnabled(false);
+
+        const dimsText = `Пол: ${form.area_floor} м², стены: ${form.area_walls} м², потолок: ${form.area_ceiling} м², плинтус: ${form.skirting_length || 0} п.м., ${ROOM_LABELS[form.room_type]}`;
 
         await saveRequestSilent({
             type: 'ГЕНЕРАЦИЯ ДИЗАЙНА',
             data: {
                 name: 'Аноним',
                 phone: '—',
-                roomDesc: description,
-                area,
-                budget: selectedBudget
+                roomDesc: form.description,
+                roomType: ROOM_LABELS[form.room_type],
+                budget: form.budget,
+                dimensions: dimsText,
+                area_floor: form.area_floor,
+                area_walls: form.area_walls,
+                area_ceiling: form.area_ceiling,
+                skirting_length: form.skirting_length,
+                estimateTotal: currentEstimate?.total
             }
         });
 
         const generateBtn = document.getElementById('generateBtn');
         loadingSpinner?.classList.remove('hidden');
-        variantsSection?.classList.add('hidden');
-        selectedDesignSection?.classList.add('hidden');
-        estimateSection?.classList.add('hidden');
-        orderSection?.classList.add('hidden');
+        loadingSpinner?.classList.add('flex');
+        designResultSection?.classList.add('hidden');
         if (generateBtn) generateBtn.disabled = true;
 
         try {
-            const response = await fetch(`${API_BASE}/generate-three-variants`, {
+            await updateEstimate();
+
+            const response = await fetch(`${API_BASE}/generate-design`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    description,
-                    budget: selectedBudget,
-                    area,
-                    originalPhotoBase64: imageBase64 ? stripDataUrl(imageBase64) : undefined
-                })
+                body: JSON.stringify({ description: form.description })
             });
-
             const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Ошибка генерации');
+
+            if (!data.success || !data.image) {
+                throw new Error(data.error || 'Не удалось сгенерировать дизайн');
             }
 
-            currentProjectId = data.projectId;
-            generatedVariants = data.variants || [];
-            selectedVariantId = null;
-            currentEstimate = null;
+            designImageBase64 = data.image;
+            if (designImage) designImage.src = toImageSrc(designImageBase64);
+            designResultSection?.classList.remove('hidden');
 
-            renderVariants(generatedVariants);
-            variantsSection?.classList.remove('hidden');
+            if (currentEstimate) {
+                await saveProjectToDb(form, currentEstimate);
+            }
+            setPdfButtonEnabled(!!designImageBase64 && !!currentEstimate);
         } catch (err) {
             console.error(err);
-            alert('Ошибка: ' + err.message);
+            alert('Ошибка: ' + (err.message || err));
         } finally {
             loadingSpinner?.classList.add('hidden');
+            loadingSpinner?.classList.remove('flex');
             if (generateBtn) generateBtn.disabled = false;
         }
     }
 
-    function renderVariants(variants) {
-        if (!variantsContainer) return;
-        const budgetLabels = { economy: 'Эконом', standard: 'Стандарт', premium: 'Премиум' };
-        variantsContainer.innerHTML = variants.map((v) => `
-            <div class="variant-thumb-wrap" data-id="${v.id}" data-budget="${v.budget}">
-                <img class="variant-thumb" src="data:image/jpeg;base64,${v.imageBase64 || ''}" alt="${v.budget}">
-                <p class="text-xs text-center text-beige mt-2">${budgetLabels[v.budget] || v.budget}</p>
-            </div>
-        `).join('');
-
-        variantsContainer.querySelectorAll('.variant-thumb').forEach((img) => {
-            img.addEventListener('click', () => {
-                const wrap = img.closest('.variant-thumb-wrap');
-                onVariantSelect(Number(wrap.dataset.id), wrap.dataset.budget);
-            });
-        });
-    }
-
-    function onVariantSelect(variantId, budget) {
-        selectedVariantId = variantId;
-        if (budget) selectedBudget = budget;
-        const variant = generatedVariants.find((v) => v.id === variantId);
-        if (!variant || !variant.imageBase64) return;
-
-        document.querySelectorAll('.variant-thumb').forEach((el) => el.classList.remove('selected'));
-        const wrap = variantsContainer.querySelector(`[data-id="${variantId}"]`);
-        wrap?.querySelector('.variant-thumb')?.classList.add('selected');
-
-        if (selectedDesignImage) {
-            selectedDesignImage.src = `data:image/jpeg;base64,${variant.imageBase64}`;
-        }
-        selectedDesignSection?.classList.remove('hidden');
-        estimateSection?.classList.add('hidden');
-
-        if (currentProjectId) {
-            fetch(`${API_BASE}/projects/${currentProjectId}/update`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ selected_variant: variantId })
-            }).catch(console.error);
-        }
-    }
-
-    showEstimateBtn?.addEventListener('click', async () => {
-        if (!selectedVariantId) {
-            alert('Сначала выберите вариант дизайна');
-            return;
-        }
-        const area = parseFloat(document.getElementById('roomArea')?.value);
-        try {
-            const response = await fetch(`${API_BASE}/estimate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ budget: selectedBudget, area })
-            });
-            const estimate = await response.json();
-            if (!response.ok) throw new Error(estimate.error || 'Ошибка расчёта');
-
-            currentEstimate = estimate;
-            renderEstimateTable(estimate);
-            estimateSection?.classList.remove('hidden');
-            orderSection?.classList.remove('hidden');
-
-            if (currentProjectId) {
-                fetch(`${API_BASE}/projects/${currentProjectId}/update`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ estimate_json: estimate })
-                }).catch(console.error);
-            }
-        } catch (err) {
-            alert('Ошибка сметы: ' + err.message);
-        }
-    });
-
-    function renderEstimateTable(estimate) {
-        const tbody = document.getElementById('estimateTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = estimate.breakdown.map((row) => `
-            <tr>
-                <td>${row.name}</td>
-                <td>${Math.round(row.quantity)}</td>
-                <td>${row.price.toLocaleString('ru-RU')} ₽</td>
-                <td>${row.lineTotal.toLocaleString('ru-RU')} ₽</td>
-            </tr>
-        `).join('');
-        const laborCell = document.getElementById('laborTotalCell');
-        const grandCell = document.getElementById('grandTotalCell');
-        const durationCell = document.getElementById('durationDaysCell');
-        const labor = estimate.laborTotal ?? estimate.work_cost ?? 0;
-        const total = estimate.total ?? estimate.total_cost ?? 0;
-        const days = estimate.durationDays ?? estimate.duration_days ?? '—';
-        if (laborCell) laborCell.textContent = labor.toLocaleString('ru-RU') + ' ₽';
-        if (grandCell) grandCell.innerHTML = '<strong>' + total.toLocaleString('ru-RU') + ' ₽</strong>';
-        if (durationCell) durationCell.textContent = days;
-    }
-
     downloadPdfBtn?.addEventListener('click', async () => {
-        if (!selectedVariantId || !currentEstimate) {
-            alert('Выберите вариант и откройте смету перед скачиванием PDF');
-            return;
-        }
-        const variant = generatedVariants.find((v) => v.id === selectedVariantId);
-        const area = parseFloat(document.getElementById('roomArea')?.value);
+        if (!designImageBase64 || !currentEstimate) return;
 
         downloadPdfBtn.disabled = true;
+        const prevText = downloadPdfBtn.textContent;
         downloadPdfBtn.textContent = 'ФОРМИРОВАНИЕ PDF…';
 
         try {
@@ -436,8 +469,7 @@ function initDesignPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    designImageBase64: variant?.imageBase64,
-                    originalPhotoBase64: originalPhotoBase64 ? stripDataUrl(originalPhotoBase64) : undefined,
+                    designImageBase64,
                     userPrompt: document.getElementById('roomDescription')?.value.trim(),
                     estimate: currentEstimate
                 })
@@ -456,25 +488,15 @@ function initDesignPage() {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
-            if (currentProjectId) {
-                fetch(`${API_BASE}/projects/${currentProjectId}/update`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pdfDownloaded: true })
-                }).catch(console.error);
-            }
         } catch (err) {
             alert('Ошибка PDF: ' + err.message);
         } finally {
-            downloadPdfBtn.disabled = false;
-            downloadPdfBtn.textContent = 'СКАЧАТЬ PDF';
+            downloadPdfBtn.textContent = prevText;
+            setPdfButtonEnabled(!!designImageBase64 && !!currentEstimate);
         }
     });
 
-    orderBtn?.addEventListener('click', () => {
-        alert('Спасибо! Менеджер свяжется с вами для уточнения деталей.');
-    });
+    scheduleEstimateUpdate();
 }
 
 function base64ToBlob(base64, mimeType) {
@@ -502,11 +524,15 @@ async function renderAdminTable() {
     }
     
     tbody.innerHTML = requests.map(req => `
-        <tr class="hover:bg-white/5 transition">
+        <tr class="hover:bg-white/5 transition admin-row" data-id="${req.id}">
             <td class="text-sm text-beige">#${req.id}</td>
             <td class="text-xs text-ivory/50">${req.createdAtDisplay || '—'}</td>
             <td class="text-sm font-medium">${req.type || '—'}</td>
-            <td class="text-sm text-ivory/60">${formatRequestData(req.data)}</td>
+            <td class="text-sm text-ivory/60">
+                ${formatRequestData(req.data)}
+                ${req.data?.dimensions ? `<br><span class="text-beige/70 text-xs">${req.data.dimensions}</span>` : ''}
+                ${req.data?.estimateTotal ? `<br><span class="text-xs">Смета: ${Number(req.data.estimateTotal).toLocaleString('ru-RU')} ₽</span>` : ''}
+            </td>
             <td><select class="status-select" data-id="${req.id}">
                 <option value="new" ${req.status === 'new' ? 'selected' : ''}>НОВАЯ</option>
                 <option value="in_work" ${req.status === 'in_work' ? 'selected' : ''}>В РАБОТЕ</option>
@@ -545,7 +571,11 @@ function formatRequestData(data) {
     let parts = [];
     if (data.name) parts.push(data.name);
     if (data.phone) parts.push(data.phone);
-    if (data.roomDesc) parts.push(data.roomDesc.substring(0, 40) + '...');
+    if (data.roomType) parts.push(`🏠 ${data.roomType}`);
+    if (data.budget) parts.push(`💰 ${data.budget}`);
+    if (data.roomDesc) parts.push(data.roomDesc.substring(0, 50) + (data.roomDesc.length > 50 ? '…' : ''));
+    if (data.area_floor) parts.push(`пол ${data.area_floor} м²`);
+    if (data.area_walls) parts.push(`стены ${data.area_walls} м²`);
     if (data.calcParams) parts.push(data.calcParams);
     return parts.join('<br>') || '—';
 }
@@ -581,10 +611,51 @@ function exportToExcel() {
 }
 
 // Инициализация админки
+async function loadDbProjectsIntoTable() {
+    const tbody = document.getElementById('requestsTable');
+    if (!tbody) return;
+    try {
+        const res = await fetch(`${window.location.origin}/api/projects`);
+        const projects = await res.json();
+        const designProjects = (projects || []).filter((p) => p.type === 'ДИЗАЙН-ПРОЕКТ').slice(0, 20);
+        if (designProjects.length === 0) return;
+
+        const dbRows = designProjects.map((p) => {
+            let est = {};
+            try { est = p.estimate_json ? JSON.parse(p.estimate_json) : {}; } catch (_) {}
+            const room = p.room_type || '—';
+            const dims = `пол ${p.area_floor || '—'} / стены ${p.area_walls || '—'} / потолок ${p.area_ceiling || '—'} / плинтус ${p.skirting_length || 0} п.м.`;
+            return `
+                <tr class="hover:bg-white/5 transition bg-beige/5">
+                    <td class="text-sm text-beige">DB#${p.id}</td>
+                    <td class="text-xs text-ivory/50">${p.created_at || '—'}</td>
+                    <td class="text-sm font-medium">${p.type}</td>
+                    <td class="text-sm text-ivory/60">
+                        ${p.description ? p.description.substring(0, 40) + '…' : '—'}<br>
+                        <span class="text-beige/70 text-xs">${room} · ${p.budget || '—'} · ${dims}</span><br>
+                        <span class="text-xs">Итого: ${est.total ? Number(est.total).toLocaleString('ru-RU') + ' ₽' : '—'}</span>
+                    </td>
+                    <td class="text-xs text-ivory/40">${p.status || 'new'}</td>
+                    <td class="text-xs text-ivory/30">SQLite</td>
+                </tr>
+            `;
+        }).join('');
+
+        if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+        tbody.insertAdjacentHTML('beforeend', dbRows);
+    } catch (e) {
+        console.warn('DB projects load skipped:', e);
+    }
+}
+
 if (window.location.pathname.includes('admin.html')) {
-    document.addEventListener('DOMContentLoaded', () => {
-        renderAdminTable();
+    document.addEventListener('DOMContentLoaded', async () => {
+        await renderAdminTable();
+        await loadDbProjectsIntoTable();
         document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
-        document.getElementById('refreshDataBtn')?.addEventListener('click', renderAdminTable);
+        document.getElementById('refreshDataBtn')?.addEventListener('click', async () => {
+            await renderAdminTable();
+            await loadDbProjectsIntoTable();
+        });
     });
 }

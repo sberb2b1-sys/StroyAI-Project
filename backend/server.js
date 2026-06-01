@@ -6,7 +6,8 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const port = 5000;
+// На macOS порт 5000 занят AirPlay Receiver — используйте 3001
+const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -30,8 +31,139 @@ db.run(`CREATE TABLE IF NOT EXISTS projects (
     budget TEXT,
     generated_variants_json TEXT,
     original_photo_base64 TEXT,
-    description TEXT
+    description TEXT,
+    estimate_json TEXT,
+    room_type TEXT,
+    area_floor REAL,
+    area_walls REAL,
+    area_ceiling REAL,
+    skirting_length REAL
 )`);
+
+// Миграция: добавить колонки в существующую БД
+const extraColumns = [
+    ['estimate_json', 'TEXT'],
+    ['room_type', 'TEXT'],
+    ['area_floor', 'REAL'],
+    ['area_walls', 'REAL'],
+    ['area_ceiling', 'REAL'],
+    ['skirting_length', 'REAL']
+];
+db.all('PRAGMA table_info(projects)', (err, cols) => {
+    if (err || !cols) return;
+    const existing = new Set(cols.map((c) => c.name));
+    extraColumns.forEach(([name, sqlType]) => {
+        if (!existing.has(name)) {
+            db.run(`ALTER TABLE projects ADD COLUMN ${name} ${sqlType}`);
+        }
+    });
+});
+
+function loadPrices() {
+    const raw = fs.readFileSync(path.join(__dirname, 'prices.json'), 'utf8');
+    return JSON.parse(raw);
+}
+
+/** Расчёт строки сметы: (материалы + работы) × коэффициент помещения */
+function calcLine(materialCost, workCost, coefficient) {
+    const mat = Math.round(materialCost * coefficient);
+    const work = Math.round(workCost * coefficient);
+    return { material_cost: mat, work_cost: work, total: mat + work };
+}
+
+function calculateDetailedEstimate(params) {
+    const {
+        budget = 'standard',
+        area_floor = 0,
+        area_walls = 0,
+        area_ceiling = 0,
+        skirting_length = 0,
+        room_type = 'living_room'
+    } = params;
+
+    const prices = loadPrices();
+    const mats = prices.materials[budget];
+    const works = prices.work_cost[budget];
+    if (!mats || !works) {
+        throw new Error('Неизвестный бюджет');
+    }
+
+    const coef = prices.room_coefficients[room_type] ?? prices.room_coefficients[prices.default_room] ?? 1;
+
+    const flooringRaw = calcLine(
+        area_floor * mats.flooring.price_per_sqm,
+        area_floor * works.flooring,
+        coef
+    );
+    const wallsRaw = calcLine(
+        area_walls * mats.wall_paint.price_per_sqm,
+        area_walls * works.wall_paint,
+        coef
+    );
+    const ceilingRaw = calcLine(
+        area_ceiling * mats.ceiling.price_per_sqm,
+        area_ceiling * works.ceiling,
+        coef
+    );
+    const skirtingLen = Number(skirting_length) || 0;
+    const skirtingRaw = calcLine(
+        skirtingLen * mats.skirting.price_per_meter,
+        skirtingLen * works.skirting,
+        coef
+    );
+
+    const flooring = {
+        material_name: mats.flooring.name,
+        quantity: area_floor,
+        unit: mats.flooring.unit,
+        material_unit_price: mats.flooring.price_per_sqm,
+        work_unit_price: works.flooring,
+        ...flooringRaw
+    };
+    const walls = {
+        material_name: mats.wall_paint.name,
+        quantity: area_walls,
+        unit: mats.wall_paint.unit,
+        material_unit_price: mats.wall_paint.price_per_sqm,
+        work_unit_price: works.wall_paint,
+        ...wallsRaw
+    };
+    const ceiling = {
+        material_name: mats.ceiling.name,
+        quantity: area_ceiling,
+        unit: mats.ceiling.unit,
+        material_unit_price: mats.ceiling.price_per_sqm,
+        work_unit_price: works.ceiling,
+        ...ceilingRaw
+    };
+    const skirting = {
+        material_name: mats.skirting.name,
+        quantity: skirtingLen,
+        unit: mats.skirting.unit,
+        material_unit_price: mats.skirting.price_per_meter,
+        work_unit_price: works.skirting,
+        ...skirtingRaw
+    };
+
+    const total = flooring.total + walls.total + ceiling.total + skirting.total;
+    const durationDays = prices.duration_days?.[budget] ?? 45;
+
+    return {
+        budget,
+        room_type,
+        room_coefficient: coef,
+        area_floor,
+        area_walls,
+        area_ceiling,
+        skirting_length: skirtingLen,
+        flooring,
+        walls,
+        ceiling,
+        skirting,
+        total,
+        duration_days: durationDays
+    };
+}
 
 // Обёртки для промисов
 function dbRun(sql, params = []) {
@@ -155,67 +287,80 @@ app.post('/api/generate-three-variants', async (req, res) => {
     });
 });
 
-// API: получить смету
+// API: получить смету (по размерам помещения)
 app.post('/api/estimate', (req, res) => {
-    const { budget, area } = req.body;
-
-    let prices;
     try {
-        const pricesRaw = fs.readFileSync(path.join(__dirname, 'prices.json'), 'utf8');
-        prices = JSON.parse(pricesRaw);
+        const {
+            budget,
+            area_floor,
+            area_walls,
+            area_ceiling,
+            skirting_length,
+            room_type
+        } = req.body;
+
+        if (!budget) {
+            return res.status(400).json({ error: 'Укажите бюджет' });
+        }
+        if (!area_floor || !area_walls || !area_ceiling) {
+            return res.status(400).json({ error: 'Укажите площади пола, стен и потолка' });
+        }
+
+        const estimate = calculateDetailedEstimate({
+            budget,
+            area_floor: Number(area_floor),
+            area_walls: Number(area_walls),
+            area_ceiling: Number(area_ceiling),
+            skirting_length: Number(skirting_length) || 0,
+            room_type: room_type || 'living_room'
+        });
+
+        res.json(estimate);
     } catch (err) {
-        return res.status(500).json({ error: 'Не удалось загрузить базу цен' });
+        res.status(500).json({ error: err.message });
     }
+});
 
-    const budgetData = prices.materials[budget];
-    const laborCostPerSqm = prices.work_cost_per_sqm[budget];
-    const userArea = area || prices.default_area || 45;
+// API: сохранить дизайн-проект с размерами и сметой
+app.post('/api/design-project', async (req, res) => {
+    try {
+        const {
+            description,
+            budget,
+            room_type,
+            area_floor,
+            area_walls,
+            area_ceiling,
+            skirting_length,
+            estimate_json
+        } = req.body;
 
-    if (!budgetData || !laborCostPerSqm) {
-        return res.status(400).json({ error: 'Неизвестный бюджет' });
+        const result = await dbRun(
+            `INSERT INTO projects (
+                type, description, budget, room_type,
+                area_floor, area_walls, area_ceiling, skirting_length,
+                area, estimate_json, data, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                'ДИЗАЙН-ПРОЕКТ',
+                description || null,
+                budget || null,
+                room_type || null,
+                area_floor ?? null,
+                area_walls ?? null,
+                area_ceiling ?? null,
+                skirting_length ?? null,
+                area_floor ?? null,
+                estimate_json ? JSON.stringify(estimate_json) : null,
+                JSON.stringify(req.body),
+                'new'
+            ]
+        );
+
+        res.json({ success: true, projectId: result.lastID });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
-
-    const materialsTotal = Object.values(budgetData).reduce((sum, item) => {
-        if (item.price_per_sqm) return sum + (item.price_per_sqm * userArea);
-        if (item.price_per_liter) return sum + (item.price_per_liter * (userArea * 0.2));
-        if (item.fixed_price) return sum + item.fixed_price;
-        return sum;
-    }, 0);
-
-    const laborTotal = laborCostPerSqm * userArea;
-    const total = materialsTotal + laborTotal;
-    const durationDays = prices.duration_days?.[budget] || 45;
-
-    const breakdown = Object.entries(budgetData).map(([key, item]) => {
-        const qty = item.price_per_sqm ? userArea : item.price_per_liter ? userArea * 0.2 : 1;
-        const price = item.price_per_sqm || item.price_per_liter || item.fixed_price || 0;
-        const lineTotal = item.price_per_sqm
-            ? item.price_per_sqm * userArea
-            : item.price_per_liter
-                ? item.price_per_liter * (userArea * 0.2)
-                : item.fixed_price || 0;
-        return {
-            name: item.name || key,
-            unit: item.unit || '—',
-            price,
-            quantity: qty,
-            lineTotal: Math.round(lineTotal)
-        };
-    });
-
-    res.json({
-        budget,
-        area: userArea,
-        work_cost: Math.round(laborTotal),
-        materials_cost: Math.round(materialsTotal),
-        total_cost: Math.round(total),
-        laborTotal: Math.round(laborTotal),
-        materialsTotal: Math.round(materialsTotal),
-        total: Math.round(total),
-        breakdown,
-        duration_days: durationDays,
-        durationDays
-    });
 });
 
 // API: сгенерировать PDF
@@ -246,9 +391,12 @@ app.post('/api/generate-pdf', async (req, res) => {
             res.json({ success: true, pdfBase64 });
         });
 
-        doc.fontSize(20).text('СтройAI — Дизайн-проект', { align: 'center' });
+        doc.fontSize(20).text('СтройAI — Дизайн-проект и смета', { align: 'center' });
         doc.moveDown();
         doc.fontSize(12).text(`Описание: ${userPrompt || '—'}`);
+        if (estimate.room_type) {
+            doc.text(`Тип помещения: ${estimate.room_type} (коэф. ×${estimate.room_coefficient || 1})`);
+        }
         doc.moveDown();
 
         const orig = stripDataUrl(originalPhotoBase64);
@@ -261,20 +409,36 @@ app.post('/api/generate-pdf', async (req, res) => {
         const design = stripDataUrl(designB64);
         if (design) {
             doc.text('Сгенерированный дизайн:');
-            doc.image(Buffer.from(design, 'base64'), { fit: [400, 300] });
+            doc.image(Buffer.from(design, 'base64'), { fit: [400, 280] });
             doc.moveDown();
         }
 
-        doc.fontSize(14).text('Смета', { underline: true });
+        doc.fontSize(14).text('Детальная смета', { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(10);
+
+        const lines = [
+            { key: 'flooring', label: 'Пол' },
+            { key: 'walls', label: 'Стены' },
+            { key: 'ceiling', label: 'Потолок' },
+            { key: 'skirting', label: 'Плинтус' }
+        ];
+
+        lines.forEach(({ key, label }) => {
+            const row = estimate[key];
+            if (!row) return;
+            doc.text(
+                `${label}: ${row.material_name} | ${row.quantity} ${row.unit || ''} | ` +
+                `мат. ${row.material_unit_price} ₽ + раб. ${row.work_unit_price} ₽ | ` +
+                `мат. ${row.material_cost.toLocaleString('ru-RU')} ₽ + раб. ${row.work_cost.toLocaleString('ru-RU')} ₽ = ` +
+                `${row.total.toLocaleString('ru-RU')} ₽`
+            );
+        });
+
+        doc.moveDown();
         doc.fontSize(12);
-        const workCost = estimate.work_cost ?? estimate.laborTotal ?? 0;
-        const materialsCost = estimate.materials_cost ?? estimate.materialsTotal ?? 0;
-        const totalCost = estimate.total_cost ?? estimate.total ?? 0;
-        const days = estimate.duration_days ?? estimate.durationDays ?? 45;
-        doc.text(`Стоимость работ: ${workCost.toLocaleString('ru-RU')} ₽`);
-        doc.text(`Стоимость материалов: ${materialsCost.toLocaleString('ru-RU')} ₽`);
-        doc.text(`Итого: ${totalCost.toLocaleString('ru-RU')} ₽`);
-        doc.text(`Срок ремонта: ${days} дней`);
+        doc.text(`Итого: ${(estimate.total || 0).toLocaleString('ru-RU')} ₽`, { underline: true });
+        doc.text(`Срок ремонта: ${estimate.duration_days ?? 45} дней`);
 
         doc.end();
     } catch (err) {
@@ -290,7 +454,8 @@ app.put('/api/projects/:id/update', async (req, res) => {
 
     const allowed = [
         'selected_variant', 'estimate_json', 'pdf_generated', 'pdf_downloaded',
-        'status', 'budget', 'area', 'description'
+        'status', 'budget', 'area', 'description',
+        'room_type', 'area_floor', 'area_walls', 'area_ceiling', 'skirting_length'
     ];
     const fields = [];
     const values = [];
@@ -378,4 +543,5 @@ app.listen(port, () => {
     console.log(`✅ Бэкенд запущен на http://localhost:${port}`);
     console.log(`📁 Файлы из: ${publicDir}`);
     console.log(`🌐 Открывай: http://localhost:${port}/design.html`);
+    console.log('⚠️  Не используйте порт 5000 на macOS — его занимает AirPlay (отсюда был 403).');
 });
