@@ -56,39 +56,113 @@
                 <div class="inline-block w-12 h-px bg-beige mb-4"></div>
                 <span class="text-beige text-sm tracking-[0.2em] uppercase font-semibold">НЕЙРОСЕТЬ HARMONY</span>
                 <h1 class="text-5xl md:text-6xl font-serif font-bold mt-3">ГЕНЕРАТОР <span class="text-beige">ИНТЕРЬЕРА</span></h1>
-                <p class="text-ivory/50 mt-4 text-lg">Опишите ваше пространство — AI создаст эксклюзивный дизайн за 60 секунд</p>
+                <p class="text-ivory/50 mt-4 text-lg">Опишите пространство, укажите площадь и бюджет — получите 3 варианта дизайна и смету</p>
             </div>
 
             <div class="bg-dark-surface border border-beige/10 rounded-none p-8 shadow-2xl">
-                <!-- Поле для описания -->
-                <textarea id="roomDescription" rows="5" class="w-full bg-dark-bg border border-beige/20 rounded-none p-5 text-ivory focus:border-beige focus:outline-none resize-none placeholder:text-ivory/30 mb-6" placeholder="Пример: Modern living room, beige tones, large windows, minimalist style, wooden floor, cozy atmosphere"></textarea>
-                
-                <button id="generateBtn" class="w-full bg-gradient-to-r from-beige to-gold-premium text-dark-bg font-semibold py-4 tracking-wider hover:shadow-xl transition-all transform hover:scale-[1.01] flex items-center justify-center gap-3">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                    </svg>
-                    СГЕНЕРИРОВАТЬ ДИЗАЙН
-                </button>
+                <form id="designForm" class="space-y-6">
+                    <div>
+                        <label for="roomArea" class="block text-sm text-beige mb-2 uppercase tracking-wider">Площадь (м²)</label>
+                        <input type="number" id="roomArea" name="area" step="0.1" min="1" required
+                            class="w-full bg-dark-bg border border-beige/20 rounded-none p-4 text-ivory focus:border-beige focus:outline-none"
+                            placeholder="Например: 45">
+                    </div>
 
-                <!-- Спиннер загрузки -->
+                    <div>
+                        <span class="block text-sm text-beige mb-3 uppercase tracking-wider">Бюджет ремонта</span>
+                        <div class="budget-buttons flex flex-wrap gap-3">
+                            <button type="button" class="btn budget-btn" data-budget="economy">Эконом</button>
+                            <button type="button" class="btn budget-btn active" data-budget="standard">Стандарт</button>
+                            <button type="button" class="btn budget-btn" data-budget="premium">Премиум</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="roomPhoto" class="block text-sm text-beige mb-2 uppercase tracking-wider">Фото помещения (необязательно)</label>
+                        <input type="file" id="roomPhoto" accept="image/*"
+                            class="w-full bg-dark-bg border border-beige/20 rounded-none p-3 text-ivory/70 file:mr-4 file:py-2 file:px-4 file:border-0 file:bg-beige file:text-dark-bg file:font-semibold">
+                        <p id="fileNameDisplay" class="hidden text-sm text-beige mt-2"></p>
+                    </div>
+
+                    <div>
+                        <label for="roomDescription" class="block text-sm text-beige mb-2 uppercase tracking-wider">Описание интерьера</label>
+                        <textarea id="roomDescription" rows="5" required
+                            class="w-full bg-dark-bg border border-beige/20 rounded-none p-5 text-ivory focus:border-beige focus:outline-none resize-none placeholder:text-ivory/30"
+                            placeholder="Modern living room, beige tones, large windows, minimalist style, wooden floor"></textarea>
+                    </div>
+
+                    <button type="submit" id="generateBtn"
+                        class="w-full bg-gradient-to-r from-beige to-gold-premium text-dark-bg font-semibold py-4 tracking-wider hover:shadow-xl transition-all flex items-center justify-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        СГЕНЕРИРОВАТЬ 3 ВАРИАНТА
+                    </button>
+                </form>
+
                 <div id="loadingSpinner" class="hidden flex justify-center py-16">
                     <div class="relative">
                         <div class="w-16 h-16 border-2 border-beige/30 border-t-beige rounded-full animate-spin"></div>
                         <div class="absolute inset-0 flex items-center justify-center text-xs text-beige tracking-wider">AI</div>
                     </div>
+                    <p class="w-full text-center text-ivory/50 text-sm mt-4">Генерация 3 вариантов может занять несколько минут…</p>
                 </div>
 
-                <!-- Результат генерации -->
-                <div id="designResult" class="hidden mt-10">
+                <div id="variantsSection" class="hidden mt-10">
+                    <h3 class="font-serif text-xl text-beige mb-4">Выберите вариант дизайна</h3>
+                    <div id="variantsContainer" class="variants-container"></div>
+                </div>
+
+                <div id="selectedDesignSection" class="hidden mt-10">
                     <div class="relative group overflow-hidden rounded-lg">
-                        <img id="designImage" src="" alt="Сгенерированный дизайн" class="w-full transition-all duration-700">
-                        <div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-4 py-1 text-xs text-beige tracking-wider rounded">AI GENERATED · 8K</div>
+                        <img id="selectedDesignImage" src="" alt="Выбранный дизайн" class="w-full">
+                    </div>
+                    <div class="mt-6 text-center">
+                        <button type="button" id="showEstimateBtn"
+                            class="border border-beige text-beige px-8 py-3 font-semibold tracking-wider hover:bg-beige/10 transition-all">
+                            ПОКАЗАТЬ СМЕТУ
+                        </button>
                     </div>
                 </div>
 
-                <!-- Кнопка для заказа -->
+                <div id="estimateSection" class="hidden mt-10">
+                    <h3 class="font-serif text-xl text-beige mb-4">Смета ремонта</h3>
+                    <div class="overflow-x-auto">
+                        <table class="estimate-table w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th>Материал</th>
+                                    <th>Кол-во</th>
+                                    <th>Цена</th>
+                                    <th>Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody id="estimateTableBody"></tbody>
+                            <tfoot>
+                                <tr class="estimate-total-row">
+                                    <td colspan="3">Работы</td>
+                                    <td id="laborTotalCell">—</td>
+                                </tr>
+                                <tr class="estimate-total-row">
+                                    <td colspan="3"><strong>Итого</strong></td>
+                                    <td id="grandTotalCell"><strong>—</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-beige">Срок: <span id="durationDaysCell">—</span> дней</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mt-8 text-center">
+                        <button type="button" id="downloadPdfBtn"
+                            class="bg-gradient-to-r from-beige to-gold-premium text-dark-bg px-10 py-3 font-semibold tracking-wider hover:shadow-xl transition-all">
+                            СКАЧАТЬ PDF
+                        </button>
+                    </div>
+                </div>
+
                 <div id="orderSection" class="hidden mt-8 text-center">
-                    <button id="orderBtn" class="border-2 border-beige text-beige px-10 py-3 font-semibold tracking-wider hover:bg-beige/10 transition-all">
+                    <button type="button" id="orderBtn" class="border-2 border-beige text-beige px-10 py-3 font-semibold tracking-wider hover:bg-beige/10 transition-all">
                         ЗАКАЗАТЬ ПРОЕКТ →
                     </button>
                 </div>
@@ -100,66 +174,6 @@
         СТРОЙ AI — НЕЙРОСЕТЕВЫЕ ТЕХНОЛОГИИ В ПРЕМИУМ-СТРОИТЕЛЬСТВЕ
     </footer>
 
-    <script>
-        // API endpoint бэкенда
-        const API_URL = 'http://localhost:5000/api/generate-design';
-        
-        const generateBtn = document.getElementById('generateBtn');
-        const roomDescription = document.getElementById('roomDescription');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const designResult = document.getElementById('designResult');
-        const designImage = document.getElementById('designImage');
-        const orderSection = document.getElementById('orderSection');
-        
-        generateBtn.addEventListener('click', async () => {
-            const description = roomDescription.value.trim();
-            
-            if (!description) {
-                alert('Пожалуйста, опишите желаемый дизайн на английском языке');
-                return;
-            }
-            
-            // Показываем спиннер, скрываем старые результаты
-            loadingSpinner.classList.remove('hidden');
-            designResult.classList.add('hidden');
-            orderSection.classList.add('hidden');
-            generateBtn.disabled = true;
-            generateBtn.textContent = '⏳ ГЕНЕРАЦИЯ...';
-            
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ description: description })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.image) {
-                    designImage.src = `data:image/jpeg;base64,${data.image}`;
-                    designResult.classList.remove('hidden');
-                    orderSection.classList.remove('hidden');
-                } else {
-                    alert('Ошибка генерации: ' + (data.error || 'Неизвестная ошибка'));
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                alert('Не удалось соединиться с сервером. Убедитесь, что бэкенд запущен (node server.js)');
-            } finally {
-                loadingSpinner.classList.add('hidden');
-                generateBtn.disabled = false;
-                generateBtn.textContent = 'СГЕНЕРИРОВАТЬ ДИЗАЙН';
-            }
-        });
-        
-        // Кнопка заказа (можно настроить под вашу CRM)
-        const orderBtn = document.getElementById('orderBtn');
-        orderBtn.addEventListener('click', () => {
-            alert('Спасибо! Менеджер свяжется с вами для уточнения деталей.');
-            // Здесь можно добавить отправку заявки в Битрикс24
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

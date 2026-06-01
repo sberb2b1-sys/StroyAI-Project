@@ -192,6 +192,12 @@ function fileToBase64(file) {
     });
 }
 
+function stripDataUrl(value) {
+    if (!value || typeof value !== 'string') return '';
+    const m = value.match(/^data:image\/[a-zA-Z+]+;base64,(.+)$/);
+    return m ? m[1] : value;
+}
+
 function initDesignPage() {
     const designForm = document.getElementById('designForm');
     if (!designForm) return;
@@ -292,7 +298,7 @@ function initDesignPage() {
                     description,
                     budget: selectedBudget,
                     area,
-                    imageBase64: imageBase64 || undefined
+                    originalPhotoBase64: imageBase64 ? stripDataUrl(imageBase64) : undefined
                 })
             });
 
@@ -319,23 +325,27 @@ function initDesignPage() {
 
     function renderVariants(variants) {
         if (!variantsContainer) return;
-        const labels = ['Эконом', 'Стандарт', 'Премиум'];
-        variantsContainer.innerHTML = variants.map((v, i) => `
-            <div class="variant-thumb-wrap" data-id="${v.id}">
-                <img class="variant-thumb" src="data:image/jpeg;base64,${v.imageBase64}" alt="Вариант ${v.id}">
-                <p class="text-xs text-center text-beige mt-2">${labels[i] || 'Вариант ' + v.id}</p>
+        const budgetLabels = { economy: 'Эконом', standard: 'Стандарт', premium: 'Премиум' };
+        variantsContainer.innerHTML = variants.map((v) => `
+            <div class="variant-thumb-wrap" data-id="${v.id}" data-budget="${v.budget}">
+                <img class="variant-thumb" src="data:image/jpeg;base64,${v.imageBase64 || ''}" alt="${v.budget}">
+                <p class="text-xs text-center text-beige mt-2">${budgetLabels[v.budget] || v.budget}</p>
             </div>
         `).join('');
 
         variantsContainer.querySelectorAll('.variant-thumb').forEach((img) => {
-            img.addEventListener('click', () => onVariantSelect(Number(img.closest('.variant-thumb-wrap').dataset.id)));
+            img.addEventListener('click', () => {
+                const wrap = img.closest('.variant-thumb-wrap');
+                onVariantSelect(Number(wrap.dataset.id), wrap.dataset.budget);
+            });
         });
     }
 
-    function onVariantSelect(variantId) {
+    function onVariantSelect(variantId, budget) {
         selectedVariantId = variantId;
+        if (budget) selectedBudget = budget;
         const variant = generatedVariants.find((v) => v.id === variantId);
-        if (!variant) return;
+        if (!variant || !variant.imageBase64) return;
 
         document.querySelectorAll('.variant-thumb').forEach((el) => el.classList.remove('selected'));
         const wrap = variantsContainer.querySelector(`[data-id="${variantId}"]`);
@@ -402,9 +412,12 @@ function initDesignPage() {
         const laborCell = document.getElementById('laborTotalCell');
         const grandCell = document.getElementById('grandTotalCell');
         const durationCell = document.getElementById('durationDaysCell');
-        if (laborCell) laborCell.textContent = estimate.laborTotal.toLocaleString('ru-RU') + ' ₽';
-        if (grandCell) grandCell.innerHTML = '<strong>' + estimate.total.toLocaleString('ru-RU') + ' ₽</strong>';
-        if (durationCell) durationCell.textContent = estimate.durationDays;
+        const labor = estimate.laborTotal ?? estimate.work_cost ?? 0;
+        const total = estimate.total ?? estimate.total_cost ?? 0;
+        const days = estimate.durationDays ?? estimate.duration_days ?? '—';
+        if (laborCell) laborCell.textContent = labor.toLocaleString('ru-RU') + ' ₽';
+        if (grandCell) grandCell.innerHTML = '<strong>' + total.toLocaleString('ru-RU') + ' ₽</strong>';
+        if (durationCell) durationCell.textContent = days;
     }
 
     downloadPdfBtn?.addEventListener('click', async () => {
@@ -423,12 +436,9 @@ function initDesignPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    projectId: currentProjectId,
-                    variantId: selectedVariantId,
-                    imageBase64: variant?.imageBase64,
-                    originalPhotoBase64: originalPhotoBase64,
-                    area,
-                    budget: selectedBudget,
+                    designImageBase64: variant?.imageBase64,
+                    originalPhotoBase64: originalPhotoBase64 ? stripDataUrl(originalPhotoBase64) : undefined,
+                    userPrompt: document.getElementById('roomDescription')?.value.trim(),
                     estimate: currentEstimate
                 })
             });

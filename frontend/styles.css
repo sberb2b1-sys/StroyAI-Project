@@ -115,6 +115,77 @@ td {
     backdrop-filter: blur(12px);
 }
 
+/* Design generator: budget, variants, estimate */
+.budget-buttons .btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid rgba(212, 184, 150, 0.4);
+    background: #0A0A0A;
+    color: #F5F0E6;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.budget-buttons .btn.active {
+    background: linear-gradient(135deg, #D4B896, #C8A87C);
+    color: #050505;
+    border-color: #C8A87C;
+}
+
+.variants-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.variant-thumb {
+    width: 200px;
+    height: 150px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.variant-thumb:hover {
+    transform: scale(1.02);
+}
+
+.variant-thumb.selected {
+    border-color: #C8A87C;
+    box-shadow: 0 0 12px rgba(200, 168, 124, 0.45);
+}
+
+.estimate-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #F5F0E6;
+}
+
+.estimate-table th,
+.estimate-table td {
+    border: 1px solid rgba(212, 184, 150, 0.15);
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+}
+
+.estimate-table thead th {
+    background: rgba(212, 184, 150, 0.12);
+    color: #D4B896;
+    font-weight: 600;
+}
+
+.estimate-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.estimate-table .estimate-total-row td {
+    background: rgba(212, 184, 150, 0.08);
+    font-weight: 500;
+}
+
 @media (max-width: 768px) {
     .container {
         padding-left: 1.25rem;

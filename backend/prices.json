@@ -1,0 +1,36 @@
+{
+  "default_area": 45,
+  "work_cost_per_sqm": {
+    "economy": 1200,
+    "standard": 2400,
+    "premium": 4500
+  },
+  "duration_days": {
+    "economy": 30,
+    "standard": 45,
+    "premium": 60
+  },
+  "materials": {
+    "economy": {
+      "flooring": { "name": "Ламинат", "unit": "м²", "price_per_sqm": 850 },
+      "paint": { "name": "Краска", "unit": "м²", "price_per_sqm": 300 },
+      "wallpaper": { "name": "Обои", "unit": "м²", "price_per_sqm": 308 },
+      "lighting": { "name": "Светильники", "unit": "комплект", "fixed_price": 1200 },
+      "doors": { "name": "Двери", "unit": "комплект", "fixed_price": 8500 }
+    },
+    "standard": {
+      "flooring": { "name": "Инженерная доска", "unit": "м²", "price_per_sqm": 2200 },
+      "paint": { "name": "Краска премиум", "unit": "м²", "price_per_sqm": 700 },
+      "wallpaper": { "name": "Обои дизайнерские", "unit": "м²", "price_per_sqm": 715 },
+      "lighting": { "name": "Освещение", "unit": "комплект", "fixed_price": 4500 },
+      "doors": { "name": "Двери шпон", "unit": "комплект", "fixed_price": 18500 }
+    },
+    "premium": {
+      "flooring": { "name": "Паркет премиум", "unit": "м²", "price_per_sqm": 5500 },
+      "plaster": { "name": "Декоративная штукатурка", "unit": "м²", "price_per_sqm": 2640 },
+      "panels": { "name": "Панели / молдинги", "unit": "м²", "price_per_sqm": 1080 },
+      "lighting": { "name": "Освещение премиум", "unit": "комплект", "fixed_price": 85000 },
+      "doors": { "name": "Двери массив", "unit": "комплект", "fixed_price": 42000 }
+    }
+  }
+}
